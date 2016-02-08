@@ -1,0 +1,143 @@
+---
+title: "Prediction Assignment"
+author: "Vlad Pascal"
+date: "February 8, 2016"
+output: 
+  html_document: 
+    css: w3.css
+---
+<br>
+<hr>
+
+# Introduction
+
+This analysis is based on the _Weight Lifting Exercises_ dataset, which captures exercise activity of six project participants, who took part in the experiment [^1].The purpose of this analysis is to predict the manner in which participants exercised. Specifically, _classe_ variable, which describes five different ways in which participants performed various exercises:
+
+ * exactly according to the specification (Class A)
+ * throwing the elbows to the front (Class B)
+ * lifting the dumbbell only halfway (Class C)*
+* lowering the dumbbell only halfway (Class D) 
+* throwing the hips to the front (Class E)
+
+To this end, we used random forest algorithm on the testing dataset preprocessed with Principal Component Analysis. The model was tested against 20 test cases in testing dataset. The results of this analysis are summarized below.
+
+[^1]: Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
+
+<br>
+
+# Analysis
+
+We began by loading the data in R - both training and testing and examining both datasets.
+
+```{r, warning=FALSE, message=F}
+
+library(caret); library(readr); library(randomForest)
+
+dataset <- read_csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+data_trainig <- read_csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+
+cat("Training dataset:",dim(dataset))
+cat("Testing dataset:",dim(data_trainig))
+
+table(dataset$classe)
+
+
+```
+
+The training dataset has a lot of missing data and large number of redundant variables. We created a function that removed NAs and performed some cleaning - making both datasets much smaller.
+
+```{r, warning=FALSE, message=F}
+
+# Empty variables
+
+na_count <- function(x){sum(is.na(x))}
+names(dataset[sapply(dataset,na_count)>1900])
+
+
+clean <- function(dataset){
+  
+# removing variables that contain only NAs
+  
+pattern <- grep(pattern = "kurtosis|mean|max|min|var|stddev|avg|skewness|amplitude",ignore.case = T,x = names(dataset))
+
+dataset <- dataset[,-pattern]
+
+dataset <- dataset[,-c(1:5)]
+
+}
+
+dataset <- clean(dataset)
+data_trainig <- clean(data_trainig)
+
+dataset$new_window <- factor(dataset$new_window)
+dataset$classe <- factor(dataset$classe)
+
+data_trainig$new_window <- factor(data_trainig$new_window)
+
+
+```
+
+In addition, we also removed near zero variance predictors and highly correlated variables. 
+
+```{r warning=FALSE, message=F}
+
+# Removing near zero
+
+zerp <- nearZeroVar(dataset)
+dataset<- dataset[, -zerp]
+
+# Removing highly correlated vars
+
+highcorelation <- findCorrelation(cor(dataset[-c(1,54)],use = "complete.obs"), cutoff=.75)
+dataset <- dataset[-highcorelation]
+
+```
+
+Finally, we also used a data reduction technique known as Principal Component Analysis, to select a smaller number of predictors for our model. These predictors were then fed into _randomForest_ function, which implements random forest algorithm. Generally, this method is faster than corresponding method in the _train_ function in the _caret_ package. Please note that training dataset was split into two additional sets.
+
+
+```{r warning=F, message=F}
+
+set.seed(123)
+
+inTrain <- createDataPartition(y=dataset$classe,p=0.75, list=FALSE)
+training <- dataset[inTrain,]
+testing <- dataset[-inTrain,]
+
+
+# Running PCA
+
+pca <- preProcess(training[,-36],method="pca",pcaComp=7,thresh=0.8)
+pca_training <- predict(pca,training[,-36])
+
+# Creating Random Forest Model
+
+model <- randomForest(training$classe ~.,data=pca_training, na.action = na.omit)
+print(model)
+
+# Testing the model on the subset of training data.
+
+pca_testing <- predict(pca,testing[,-36])
+confusionMatrix(testing$classe,predict(model,pca_testing))
+
+```
+
+<br>
+
+# Prediction
+
+We can compare our model to 20 test cases in the training data to examine what the model predicts. The results are presented below. Please note that training dataset does not contain _classe_ variable.
+
+```{r warning=F, message=F}
+
+temp <- predict(pca,data_trainig)
+predict(model,temp)
+
+
+```
+
+<br>
+
+# Conclusion
+
+In this analysis, we used random forest algorithm to predict the way in which participants exercised during experiment. Considerable caution must be taken when interpreting the results given that we examined only a subset of all possible models. In addition, using Principal Component Analysis makes final the model less interpretable. Finally, the various tuning parameters could be adjusted and customized (using tuning grids in the caret package) to come up with a better model.
