@@ -9,6 +9,9 @@ output:
 <br>
 <hr>
 
+[**GitHub Repo**](https://github.com/vpascal/MachineLearning)
+
+
 # Introduction
 
 This analysis is based on the _Weight Lifting Exercises_ dataset, which captures exercise activity of six project participants, who took part in the experiment [^1].The purpose of this analysis is to predict the manner in which participants exercised. Specifically, _classe_ variable, which describes five different ways in which participants performed various exercises:
