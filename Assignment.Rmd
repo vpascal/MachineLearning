@@ -5,11 +5,12 @@ date: "February 8, 2016"
 output: 
   html_document: 
     css: w3.css
+    keep_md: yes
 ---
 <br>
 <hr>
 
-[**GitHub Repo**](https://github.com/vpascal/MachineLearning)
+[**Click Here to view GitHub repo**](https://github.com/vpascal/MachineLearning)
 
 
 # Introduction
@@ -96,7 +97,9 @@ dataset <- dataset[-highcorelation]
 
 ```
 
-Finally, we also used a data reduction technique known as Principal Component Analysis, to select a smaller number of predictors for our model. These predictors were then fed into _randomForest_ function, which implements random forest algorithm. Generally, this method is faster than corresponding method in the _train_ function in the _caret_ package. Please note that training dataset was split into two additional sets.
+# Model
+
+In order to build our model, we used a data reduction technique known as Principal Component Analysis, to select a smaller subset of predictors for our model. For the purpose of this analysis, we selected seven principal components. These predictors were then fed into _randomForest_ function, which implements random forest algorithm (generally, this method is much faster than corresponding method in the _train_ function in the _caret_ package). Random forest algorithm works by constructing many classification trees and then picking appropriate classification by selecting the one with the most votes. **Please note that training dataset was split into two additional sets.**
 
 
 ```{r warning=F, message=F}
@@ -116,7 +119,17 @@ pca_training <- predict(pca,training[,-36])
 # Creating Random Forest Model
 
 model <- randomForest(training$classe ~.,data=pca_training, na.action = na.omit)
+
+# Let's a take a look at the model
+
 print(model)
+
+```
+
+Now, let's see how model performs on the subset of the training data. To evaluate the results, we used _confusionMatrix_ function from _caret_ package to calculate cross-tabulation of observed and predicted classes. The accuracy of the model is approximately 93% and **out-of-sample error** is `r (1- 0.9382)*100` Please note that in random forest, each tree is built using different bootstrap sample. As result, to get an unbiased estimate of the test error using cross-validation is not necessary: it is in fact calculated by default.
+
+<br>
+```{r warning=F, message=F}
 
 # Testing the model on the subset of training data.
 
@@ -129,7 +142,7 @@ confusionMatrix(testing$classe,predict(model,pca_testing))
 
 # Prediction
 
-We can compare our model to 20 test cases in the training data to examine what the model predicts. The results are presented below. Please note that training dataset does not contain _classe_ variable.
+We can compare our model to 20 test cases in the training data to examine what the model predicts. The results are presented below. Please note that training dataset does not contain _classe_ variable. 
 
 ```{r warning=F, message=F}
 
